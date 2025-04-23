@@ -5,8 +5,17 @@
   cmake,
   libXrandr,
   libXcursor,
+  libXfixes,
   libGL,
-  systemdLibs
+  libXext,
+  systemdLibs,
+  openal,
+  libvorbis,
+  flac,
+  cpm-cmake,
+  # zlib,
+  libsodium,
+  freetype
 }:
 let
   luajit = {
@@ -29,8 +38,8 @@ let
     src = fetchFromGitHub {
       owner = "madler";
       repo = "zlib";
-      rev = "cacf7f1d4e3d44d871b605da3b647f07d718623f";
-      hash = "sha256-j5b6aki1ztrzfCqu8y729sPar8GpyQWIrajdzpJC+ww=";
+      rev = "5a82f71ed1dfc0bec044d9702463dbdf84ea3b71";
+      hash = "sha256-L/gubPuMLJ1nq+AVZdwhcv6mkgBYzKJ6ncoYM93LvJ0=";
     };
   };
   imgui = {
@@ -54,7 +63,8 @@ let
       owner = "vittorioromeo";
       repo = "libsodium-cmake";
       rev = "fd76500b60fcaa341b6fad24cda88c3504df770d";
-      hash = "sha256-CwIcJ9siCNU64iQOmKAQjmCoUaxty00vbbnlmkO4MSA=";
+      fetchSubmodules = true;
+      hash = "sha256-knoRCiE9jKrnr6/9UTftdm0jXRg93z9EJknFDV95kVA=";
     };
   };
   boostpfr = {
@@ -68,12 +78,18 @@ let
 in stdenv.mkDerivation rec {
   pname = "open-hexagon";
   version = "unstable-2023-04-21";
-  src = ../.;
-  cmakelist = builtins.readFile ../CMakeLists.txt;
+  src = fetchFromGitHub {
+    owner = "SuperV1234";
+    repo = "SSVOpenHexagon";
+    rev = "1e2cba71242ab149d548abdb54d3bceb92c33922";
+    fetchSubmodules = true;
+    sha256 = "sha256-7H4DmzlByNBI9uke2m01hxPYFootIPwcKl/Iu2VsKyQ=";
+  };
+  # cmakelist = builtins.readFile ../CMakeLists.txt;
 
-  nativeBuildInputs = [ cmake ];
+  nativeBuildInputs = [ cmake cpm-cmake ];
 
-  buildInputs = [ libXrandr libXcursor libGL systemdLibs ];
+  buildInputs = [ libsodium freetype libXfixes libXext libXrandr libXcursor libGL systemdLibs openal libvorbis flac ];
 
   # desktopItems = [
   #   (makeDesktopItem {
@@ -87,31 +103,57 @@ in stdenv.mkDerivation rec {
   #     startupWMClass = "SSVOpenHexagon";
   #   })
   # ];
+  cmakeFlags = [
+    "-DCPM_SOURCE_CACHE=cmake"
+    "-DCPM_SFML_SOURCE=../SFML"
+    "-DCPM_luajit_SOURCE=${luajit.src}"
+    "-DCPM_zlib_SOURCE=../zlib"
+    "-DCPM_imgui_SOURCE=${imgui.src}"
+    "-DCPM_imgui-sfml_SOURCE=${imgui-sfml.src}"
+    "-DCPM_libsodium-cmake_SOURCE=${libsodium}"
+    "-DCPM_boostpfr_SOURCE=${boostpfr.src}"
+  ];
 
-  postUnpack = let
+  preConfigure = ''
+    mkdir -p cmake/cpm
+    cp ${cpm-cmake}/share/cpm/CPM.cmake cmake/cpm/CPM_0.37.0.cmake
+    sed -i 's/file(WRITE.*zlib_SOURCE_DIR.*CMakeLists.txt.*//g' CMakeLists.txt
+    cp -R --no-preserve=mode,ownership ${SFML.src} SFML
+    cp -R --no-preserve=mode,ownership ${zlib.src} zlib
+    pushd SFML/include/SFML
+    sed -i '1i #include <cstdint>' System/Utf.hpp System/String.hpp Network/Packet.hpp
+    popd
+    sed -i 's/=.*\/@CMAKE_INSTALL_LIBDIR@/=@CMAKE_INSTALL_FULL_LIBDIR@/g' zlib/zlib.pc.cmakein
+    sed -i 's/=.*\/@CMAKE_INSTALL_INCLUDEDIR@/=@CMAKE_INSTALL_FULL_INCLUDEDIR@/g' zlib/zlib.pc.cmakein
+    sed -i 's/=.*\/@CMAKE_INSTALL_LIBDIR@/=@CMAKE_INSTALL_FULL_LIBDIR@/g' SFML/tools/pkg-config/*.pc.in
+    cat SFML/tools/pkg-config/sfml-all.pc.in
+  '';
+  
+  # postUnpack = let
 
-    split-cmakelist = (cpm_pkg: input_cmakelist: builtins.split "(CPMAddPackage\\([^)]*NAME ${cpm_pkg}[^)]*\\))" input_cmakelist);
-    update-cmakelist = (cpm_pkg: input_cmakelist: lib.strings.concatStrings [
-      (lib.lists.last (lib.lists.take 1 (split-cmakelist cpm_pkg input_cmakelist)))
-      "add_subdirectory(${cpm_pkg})"
-      (lib.lists.last (split-cmakelist cpm_pkg input_cmakelist))
-    ]);
-    cpm_pkgs = [ "luajit" "SFML" "zlib" "imgui" "imgui-sfml" "libsodium-cmake" "boostpfr" ];
-    newcmakelist = builtins.foldl' (acc: elem: (update-cmakelist elem acc)) cmakelist cpm_pkgs;
-  in
-    ''
-      (
-        cd "$sourceRoot"
-        cp -R --no-preserve=mode,ownership ${luajit.src} luajit
-        cp -R --no-preserve=mode,ownership ${SFML.src} SFML
-        cp -R --no-preserve=mode,ownership ${zlib.src} zlib
-        cp -R --no-preserve=mode,ownership ${imgui.src} imgui
-        cp -R --no-preserve=mode,ownership ${imgui-sfml.src} imgui-sfml
-        cp -R --no-preserve=mode,ownership ${libsodium-cmake.src} libsodium-cmake
-        cp -R --no-preserve=mode,ownership ${boostpfr.src} boostpfr
-        echo '${newcmakelist}' > CMakeLists.txt
-        cat CMakeLists.txt
-        patchShebangs .
-      )
-    '';
+  #   split-cmakelist = (cpm_pkg: input_cmakelist: builtins.split "(CPMAddPackage\\([^)]*NAME ${cpm_pkg}[^)]*\\))" input_cmakelist);
+  #   update-cmakelist = (cpm_pkg: input_cmakelist: lib.strings.concatStrings [
+  #     (lib.lists.last (lib.lists.take 1 (split-cmakelist cpm_pkg input_cmakelist)))
+  #     "add_subdirectory(${cpm_pkg})"
+  #     (lib.lists.last (split-cmakelist cpm_pkg input_cmakelist))
+  #   ]);
+  #   cpm_pkgs = [ "luajit" "SFML" "zlib" "imgui-sfml" "libsodium-cmake" "boostpfr" ];
+  #   newcmakelist = builtins.foldl' (acc: elem: (update-cmakelist elem acc)) cmakelist cpm_pkgs;
+  # in
+  #   ''
+  #     (
+  #       cd "$sourceRoot"
+  #       cp -R --no-preserve=mode,ownership ${luajit.src} luajit
+  #       cp -R --no-preserve=mode,ownership ${SFML.src} SFML
+  #       cp -R --no-preserve=mode,ownership ${zlib.src} zlib
+  #       cp -R --no-preserve=mode,ownership ${imgui.src} imgui
+  #       cp -R --no-preserve=mode,ownership ${imgui-sfml.src} imgui-sfml
+  #       cp -R --no-preserve=mode,ownership ${libsodium-cmake.src} libsodium-cmake
+  #       cp -R --no-preserve=mode,ownership ${boostpfr.src} boostpfr
+  #       echo '${newcmakelist}' > CMakeLists.txt
+  #       cat CMakeLists.txt
+  #       patchShebangs .
+  #     )
+  #   '';
+  
 }
