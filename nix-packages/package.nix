@@ -114,10 +114,14 @@ in stdenv.mkDerivation rec {
     "-DCPM_boostpfr_SOURCE=${boostpfr.src}"
   ];
 
+  cmakeBuildDir = "buildlx";
+
   preConfigure = ''
     mkdir -p cmake/cpm
     cp ${cpm-cmake}/share/cpm/CPM.cmake cmake/cpm/CPM_0.37.0.cmake
     sed -i 's/file(WRITE.*zlib_SOURCE_DIR.*CMakeLists.txt.*//g' CMakeLists.txt
+    sed -i 's|CMAKE_SOURCE_DIR\}/_RELEASE|CMAKE_INSTALL_BINDIR\}|g' CMakeLists.txt
+    cat CMakeLists.txt
     cp -R --no-preserve=mode,ownership ${SFML.src} SFML
     cp -R --no-preserve=mode,ownership ${zlib.src} zlib
     pushd SFML/include/SFML
@@ -126,7 +130,6 @@ in stdenv.mkDerivation rec {
     sed -i 's/=.*\/@CMAKE_INSTALL_LIBDIR@/=@CMAKE_INSTALL_FULL_LIBDIR@/g' zlib/zlib.pc.cmakein
     sed -i 's/=.*\/@CMAKE_INSTALL_INCLUDEDIR@/=@CMAKE_INSTALL_FULL_INCLUDEDIR@/g' zlib/zlib.pc.cmakein
     sed -i 's/=.*\/@CMAKE_INSTALL_LIBDIR@/=@CMAKE_INSTALL_FULL_LIBDIR@/g' SFML/tools/pkg-config/*.pc.in
-    cat SFML/tools/pkg-config/sfml-all.pc.in
   '';
   
   # postUnpack = let
