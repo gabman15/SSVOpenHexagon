@@ -267,7 +267,11 @@ getFirstCompressedReplayFilenameFromArgs(const std::vector<std::string>& args)
     {
         discordManager.emplace();
     }
-
+    // Define a buffer 
+    const size_t size = 1024; 
+    // Allocate a character array to store the directory path
+    char buffer[size];  
+    ssvu::lo("::main") << "Cwd: " << getcwd(buffer,size);
     //
     //
     // ------------------------------------------------------------------------

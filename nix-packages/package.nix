@@ -75,16 +75,60 @@ let
       hash = "sha256-vKk4cAkbAEqCOjOukWQC8NoYixgA3bgXgzqWprc2hM0=";
     };
   };
+  SSVMenuSystem = {
+    src = fetchFromGitHub {
+      owner = "vittorioromeo";
+      repo = "SSVMenuSystem";
+      rev = "f2a75d1e34f5de352d5e38cdef4002b60a59c193";
+      fetchSubmodules = true;
+      hash = "sha256-k59GrURyhVn0ZIt/86i8wNILuKlC9PUSiUxXOe7Ayzo=";
+    };
+  };
+  SSVStart = {
+    src = fetchFromGitHub {
+      owner = "vittorioromeo";
+      repo = "SSVStart";
+      rev = "6cc7cb838fe9e40835982f0eb59e7162a507e0de";
+      fetchSubmodules = true;
+      hash = "sha256-sZDDUmSzDnQwWDplVK06Morl5DFHYaw3gd+uVR3u0oI=";
+    };
+  };
+  SSVUtils = {
+    src = fetchFromGitHub {
+      owner = "vittorioromeo";
+      repo = "SSVUtils";
+      rev = "6200143d3f65acc90927936531ad50eff63d0d80";
+      fetchSubmodules = true;
+      hash = "sha256-mqta/xoKHzjU7ZcCuIEOOQiy8tf0sfJL3R5Eav9MZ5o=";
+    };
+  };
+  vrm_cmake = {
+    src = fetchFromGitHub {
+      owner = "vittorioromeo";
+      repo = "vrm_cmake";
+      rev = "3c1bd66874c4321fbf60a2dbd3f2738713f481ea";
+      hash = "sha256-VcuqWUclwJpLlA86pvu8h8H6oIvi7A3wiIVe7MAIqkc=";
+    };
+  };
+  vrm_pp = {
+    src = fetchFromGitHub {
+      owner = "vittorioromeo";
+      repo = "vrm_pp";
+      rev = "d14dbb0486e2d0755443c333bb56aabe11079e3f";
+      hash = "sha256-/3rIke42Hf5npT+m+xkngegZmdvqhFtqSOYb0O7VKRw=";
+    };
+  };
 in stdenv.mkDerivation rec {
   pname = "open-hexagon";
   version = "unstable-2023-04-21";
-  src = fetchFromGitHub {
-    owner = "SuperV1234";
-    repo = "SSVOpenHexagon";
-    rev = "1e2cba71242ab149d548abdb54d3bceb92c33922";
-    fetchSubmodules = true;
-    sha256 = "sha256-7H4DmzlByNBI9uke2m01hxPYFootIPwcKl/Iu2VsKyQ=";
-  };
+  src = ../.;
+  # fetchFromGitHub {
+  #   owner = "SuperV1234";
+  #   repo = "SSVOpenHexagon";
+  #   rev = "1e2cba71242ab149d548abdb54d3bceb92c33922";
+  #   fetchSubmodules = true;
+  #   sha256 = "sha256-7H4DmzlByNBI9uke2m01hxPYFootIPwcKl/Iu2VsKyQ=";
+  # };
   # cmakelist = builtins.readFile ../CMakeLists.txt;
 
   nativeBuildInputs = [ cmake cpm-cmake ];
@@ -122,6 +166,13 @@ in stdenv.mkDerivation rec {
     sed -i 's/file(WRITE.*zlib_SOURCE_DIR.*CMakeLists.txt.*//g' CMakeLists.txt
     cp -R --no-preserve=mode,ownership ${SFML.src} SFML
     cp -R --no-preserve=mode,ownership ${zlib.src} zlib
+    mkdir extlibs
+    cp -R --no-preserve=mode,ownership ${SSVMenuSystem.src} extlibs/SSVMenuSystem
+    cp -R --no-preserve=mode,ownership ${SSVStart.src} extlibs/SSVStart
+    cp -R --no-preserve=mode,ownership ${SSVUtils.src} extlibs/SSVUtils
+    cp -R --no-preserve=mode,ownership ${vrm_cmake.src} extlibs/vrm_cmake
+    cp -R --no-preserve=mode,ownership ${vrm_pp.src} extlibs/vrm_pp
+    ls -lha extlibs/SSVUtils
     pushd SFML/include/SFML
     sed -i '1i #include <cstdint>' System/Utf.hpp System/String.hpp Network/Packet.hpp
     popd
@@ -134,15 +185,16 @@ in stdenv.mkDerivation rec {
     mkdir -p $out/bin
     mkdir -p $out/lib
     mkdir -p $out/share
-    mv $TMP/source/_RELEASE/libsteam_api.so $out/lib/
-    mv $TMP/source/_RELEASE/libdiscord_game_sdk.so $out/lib/
-    mv $TMP/source/_RELEASE/libsdkencryptedappticket.so $out/lib/
-    mv $TMP/source/_RELEASE $out/share/
+    ls -lha $TMP/$sourceRoot
+    mv $TMP/$sourceRoot/_RELEASE/libsteam_api.so $out/lib/
+    mv $TMP/$sourceRoot/_RELEASE/libdiscord_game_sdk.so $out/lib/
+    mv $TMP/$sourceRoot/_RELEASE/libsdkencryptedappticket.so $out/lib/
+    mv $TMP/$sourceRoot/_RELEASE $out/share/
     echo "#!/bin/bash" > $out/bin/open-hexagon
     echo "$out/share/_RELEASE/SSVOpenHexagon" >> $out/bin/open-hexagon
     chmod +x $out/bin/open-hexagon
   '';
-  
+
   # postUnpack = let
 
   #   split-cmakelist = (cpm_pkg: input_cmakelist: builtins.split "(CPMAddPackage\\([^)]*NAME ${cpm_pkg}[^)]*\\))" input_cmakelist);
@@ -169,5 +221,5 @@ in stdenv.mkDerivation rec {
   #       patchShebangs .
   #     )
   #   '';
-  
+
 }
