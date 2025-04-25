@@ -116,6 +116,10 @@ in stdenv.mkDerivation rec {
 
   cmakeBuildDir = "buildlx";
 
+  patches = [
+    ./dont-set-working-directory.patch
+  ];
+
   preConfigure = ''
     mkdir -p cmake/cpm
     cp ${cpm-cmake}/share/cpm/CPM.cmake cmake/cpm/CPM_0.37.0.cmake
@@ -134,15 +138,15 @@ in stdenv.mkDerivation rec {
     mkdir -p $out/bin
     mkdir -p $out/lib
     mkdir -p $out/share
-    mv $TMP/source/_RELEASE/libsteam_api.so $out/lib/
-    mv $TMP/source/_RELEASE/libdiscord_game_sdk.so $out/lib/
-    mv $TMP/source/_RELEASE/libsdkencryptedappticket.so $out/lib/
-    mv $TMP/source/_RELEASE $out/share/
+    mv $TMP/$sourceRoot/_RELEASE/libsteam_api.so $out/lib/
+    mv $TMP/$sourceRoot/_RELEASE/libdiscord_game_sdk.so $out/lib/
+    mv $TMP/$sourceRoot/_RELEASE/libsdkencryptedappticket.so $out/lib/
+    mv $TMP/$sourceRoot/_RELEASE $out/share/
     echo "#!/bin/bash" > $out/bin/open-hexagon
     echo "$out/share/_RELEASE/SSVOpenHexagon" >> $out/bin/open-hexagon
     chmod +x $out/bin/open-hexagon
   '';
-  
+
   # postUnpack = let
 
   #   split-cmakelist = (cpm_pkg: input_cmakelist: builtins.split "(CPMAddPackage\\([^)]*NAME ${cpm_pkg}[^)]*\\))" input_cmakelist);
@@ -169,5 +173,5 @@ in stdenv.mkDerivation rec {
   #       patchShebangs .
   #     )
   #   '';
-  
+
 }
