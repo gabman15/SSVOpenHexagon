@@ -143,6 +143,13 @@ in stdenv.mkDerivation rec {
     mv $TMP/$sourceRoot/_RELEASE/libsdkencryptedappticket.so $out/lib/
     mv $TMP/$sourceRoot/_RELEASE $out/share/
     echo "#!/bin/bash" > $out/bin/open-hexagon
+    echo "if [ ! -d ~/.local/share/open-hexagon ]; then" >> $out/bin/open-hexagon
+    echo "mkdir -p ~/.local/share/open-hexagon" >> $out/bin/open-hexagon
+    echo "cp -R --no-preserve=mode,ownership $out/share/_RELEASE/Assets ~/.local/share/open-hexagon/Assets" >> $out/bin/open-hexagon
+    echo "cp -R --no-preserve=mode,ownership $out/share/_RELEASE/ConfigOverrides ~/.local/share/open-hexagon/ConfigOverrides" >> $out/bin/open-hexagon
+    echo "cp -R --no-preserve=mode,ownership $out/share/_RELEASE/Packs ~/.local/share/open-hexagon/Packs" >> $out/bin/open-hexagon
+    echo "fi" >> $out/bin/open-hexagon
+    echo "cd ~/.local/share/open-hexagon" >> $out/bin/open-hexagon
     echo "$out/share/_RELEASE/SSVOpenHexagon" >> $out/bin/open-hexagon
     chmod +x $out/bin/open-hexagon
   '';
